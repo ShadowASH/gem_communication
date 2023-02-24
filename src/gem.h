@@ -1,42 +1,3 @@
-/******************************************************************************
-* Copyright (C) 2010 - 2020 Xilinx, Inc.  All rights reserved.
-* SPDX-License-Identifier: MIT
-******************************************************************************/
-
-/****************************************************************************/
-/**
-*
-* @file xemacps_example.h
-*
-* Defines common data types, prototypes, and includes the proper headers
-* for use with the EMACPS example code residing in this directory.
-*
-* This file along with xemacps_example_util.c are utilized with the specific
-* example code in the other source code files provided.
-* These examples are designed to be compiled and utilized within the SDK
-* standalone BSP development environment.
-*
-* <pre>
-* MODIFICATION HISTORY:
-*
-* Ver   Who  Date     Changes
-* ----- ---- -------- -------------------------------------------------------
-* 1.00a wsy  01/10/10 First release
-* 1.01a asa  02/27/12 Hash define added for EMACPS_SLCR_DIV_MASK.
-* 1.05a asa  09/22/13 The EthernetFrame is made cache line aligned (32 bytes).
-*					  Fix for CR #663885.
-* 3.0   hk   02/20/15 Increase array sizes to add support for jumbo frames.
-* 3.2   mus  02//16 Added support support to INTC controller
-* 3.3   kpc  12/09/16 Fixed issue when -O2 is enabled
-* 3.9   hk   01/23/19 Update versal emulation specific fixes.
-*            03/20/19 Fix alignment pragmas for IAR compiler.
-* </pre>
-*
-*****************************************************************************/
-#ifndef XEMACPS_EXAMPLE_H
-#define XEMACPS_EXAMPLE_H
-
-
 /***************************** Include Files ********************************/
 
 #include "sv_subcruiber.h"
@@ -87,7 +48,7 @@
 /* The sampling rate of RTDS is 4khz and FDTS is 250hz
    so only every one of the 16 packets needs to be saved*/
 #define ETHER_SAMPLING_RATE     16
-#define MAX_ASDU_LENGTH         16
+
 
 /***************** Macros (Inline Functions) Definitions ********************/
 
@@ -107,10 +68,19 @@ typedef char EthernetFrame[XEMACPS_MAX_VLAN_FRAME_SIZE_JUMBO]
 
 /************************** Function Prototypes *****************************/
 
-
+/*
+ * Application
+ */
+LONG EmacPsDmaStart();
+LONG EmacPsDmaInit(INTC * IntcInstancePtr,
+			  XEmacPs * EmacPsInstancePtr,
+			  u16 EmacPsDeviceId)
+void EmacPsDmaStop();
+LONG EmacPsDmaIntrRecv(XEmacPs *EmacPsInstancePtr);
+EthernetFrame getRxFrame();
 
 /*
- * Utility functions implemented in xemacps_example_util.c
+ * Utility functions implemented in gem_util.c
  */
 void EmacPsUtilSetupUart(void);
 void EmacPsUtilFrameHdrFormatMAC(EthernetFrame * FramePtr, char *DestAddr);
@@ -123,7 +93,6 @@ LONG EmacPsUtilEnterLoopback(XEmacPs * XEmacPsInstancePtr, u32 Speed);
 void EmacPsUtilstrncpy(char *Destination, const char *Source, u32 n);
 void EmacPsUtilErrorTrap(const char *Message);
 void EmacpsDelay(u32 delay);
-LONG EmacPsUtilFrameCheckSV(EthernetFrame * FramePtr);
 
 /************************** Variable Definitions ****************************/
 

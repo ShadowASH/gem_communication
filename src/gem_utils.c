@@ -1,38 +1,3 @@
-/******************************************************************************
-* Copyright (C) 2010 - 2020 Xilinx, Inc.  All rights reserved.
-* SPDX-License-Identifier: MIT
-******************************************************************************/
-
-/****************************************************************************/
-/**
-*
-* @file xemacps_example_util.c
-*
-* This file implements the utility functions for the XEmacPs example code.
-*
-* <pre>
-* MODIFICATION HISTORY:
-*
-* Ver   Who  Date     Changes
-* ----- ---- -------- -------------------------------------------------------
-* 1.00a wsy  01/10/10 First release
-* 1.00a asa  01/24/12 A new version of EmacPsUtilEnterLoopback is used for
-* 		      Zynq boards. Now there are two versions of
-* 		      EmacPsUtilEnterLoopback, one for PEEP and one for Zynq.
-* 		      If the example is to be run  on a PEEP board, define PEEP
-* 		      in xemacps_example.h.
-* 1.01a asa  02/27/12 The sleep value after PHY loopback is setup is reduced
-*		      for Zynq.
-* 3.0   kpc  01/23/15 Removed PEEP board related code
-* 3.2	hk   09/30/15 Added support for TI PHY DP83867
-* 3.2   mus  02/20/16 Added support for microblaze.
-* 3.9   hk   02/12/19 Use selected speed in loopback mode.
-* 3.14  sk   12/23/20 Correct variable name to delay in EmacpsDelay() function
-* 		      to fix the doxygen warning.
-* </pre>
-*
-*****************************************************************************/
-
 /***************************** Include Files ********************************/
 
 #include "gem.h"

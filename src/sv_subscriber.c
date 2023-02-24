@@ -26,13 +26,13 @@ struct sSVSubscriber_ASDU {
 struct sASDU_data {
     int current[8];
     int voltage[8];
-
     int valueSet[16];
-    u8* dmaValueSet;
+    u16 valueSet16bit[16];
 }
 
 sSVSubscriber_ASDU* asdu;
 sASDU_data* valueSet;
+u8 PacketsCounter = 0;
 
 
 /****************************************************************************/
@@ -182,7 +182,6 @@ void parseSVPayload(u8* buffer, u16 apduLength)
 * @note     None
 *
 *****************************************************************************/
-
 void parseSequenceOfASDU(u8* buffer, int length)
 {
     int bufPos = 0;
@@ -334,7 +333,6 @@ void parseASDU(u8* buffer, int length)
 * @note     None
 *
 *****************************************************************************/
-
 void computeCurVol(sSVSubscriber_ASDU* asdu){
 
     memset(dataSet, 0, sizeof(sASDU_data));
@@ -343,15 +341,15 @@ void computeCurVol(sSVSubscriber_ASDU* asdu){
     int dataBufferLength = asdu->dataBufferLength;
 
     while (bufPos < 8 && bufPos < dataBufferLength){
-        valueSet->valueSet[bufPos] = 1000*((int)*(buffer+bufPos++));
+        valueSet->valueSet[bufPos] = 1000*((int)*(buffer+bufPos));
+        valueSet->valueSet16bit[bufPos] = 1000*((u16)*(buffer+bufPos));
         valueSet->current[bufPos] = 1000*((int)*(buffer+bufPos++));
     }
     while (bufPos < 16 && bufPos < dataBufferLength){
         valueSet->valueSet[bufPos] = 100*((int)*(buffer+bufPos));
-        valueSet->voltage[bufPos] = 100*((int)*(buffer+bufPos));
+        valueSet->valueSet16bit[bufPos] = 100*((u16)*(buffer+bufPos));
+        valueSet->voltage[bufPos] = 100*((int)*(buffer+bufPos++));
     }
-    
-    valueSet->dmaValueSet = (u8*)&(valueSet->valueSet[0]);
     
     return;
 }
@@ -368,9 +366,8 @@ void computeCurVol(sSVSubscriber_ASDU* asdu){
 * @note     None
 *
 *****************************************************************************/
-
-u8* getASDUDataSet(){
-    return valueSet->dmaValueSet;
+u8* getASDUDataSet16Bit(){
+    return (u8*)valueSet->&valueSet16bit[0];
 }
 
 

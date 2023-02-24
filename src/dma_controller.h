@@ -95,14 +95,15 @@ extern void xil_printf(const char *format, ...);
 static void Uart550_Setup(void);
 #endif
 
-int dmaInitiate();
+int AxiDmaStart();
 int psSendDataToDma(u8 *dataBuffer, int bufferLength);
+void AxiDmaStop();
 
 static int CheckData(int Length, u8 StartValue);
 static void TxIntrHandler(void *Callback);
 static void RxIntrHandler(void *Callback);
 
-static int SetupIntrSystem(INTC * IntcInstancePtr,
+static int DMASetupIntrSystem(INTC * IntcInstancePtr,
 			   XAxiDma * AxiDmaPtr, u16 TxIntrId, u16 RxIntrId);
-static void DisableIntrSystem(INTC * IntcInstancePtr,
+static void DMADisableIntrSystem(INTC * IntcInstancePtr,
 					u16 TxIntrId, u16 RxIntrId);

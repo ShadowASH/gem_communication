@@ -38,7 +38,7 @@ static int InitDone = FALSE;
 * @note		None.
 *
 ******************************************************************************/
-int dmaInitiate(){
+int AxiDmaStart(){
 	if (InitDone)
 		return XST_SUCCESS;
 
@@ -70,7 +70,7 @@ int dmaInitiate(){
 	}
 
 	/* Set up Interrupt system  */
-	Status = SetupIntrSystem(&Intc, &AxiDma, TX_INTR_ID, RX_INTR_ID);
+	Status = DMASetupIntrSystem(&Intc, &AxiDma, TX_INTR_ID, RX_INTR_ID);
 	if (Status != XST_SUCCESS) {
 
 		xil_printf("Failed intr setup\r\n");
@@ -149,7 +149,7 @@ int psSendDataToPL(u8 *dataBuffer, int bufferLength)
     }
 
     /*
-        * Wait RX done
+        * Wait TX done
         */
     while (!TxDone && !Error) {
             /* NOP */
@@ -172,11 +172,25 @@ int psSendDataToPL(u8 *dataBuffer, int bufferLength)
 
 	xil_printf("Successfully transfered data to PL in simple interrupt mode\r\n");
 
-	/* Disable TX and RX Ring interrupts and return success */
-
-	// DisableIntrSystem(&Intc, TX_INTR_ID, RX_INTR_ID);
-
 	return XST_SUCCESS;
+}
+
+
+/*****************************************************************************/
+/**
+*
+* This function stops the DMA engine.
+*
+* @param	None
+*
+* @return   None
+*
+* @note		None.
+*
+******************************************************************************/
+void AxiDma_Stop(){
+	/* Disable TX and RX Ring interrupts and return success */
+	DMADisableIntrSystem(&Intc, TX_INTR_ID, RX_INTR_ID);
 }
 
 #ifdef XPAR_UARTNS550_0_BASEADDR
@@ -203,46 +217,6 @@ static void Uart550_Setup(void)
 }
 #endif
 
-/*****************************************************************************/
-/*
-*
-* This function checks data buffer after the DMA transfer is finished.
-*
-* We use the static tx/rx buffers.
-*
-* @param	Length is the length to check
-* @param	StartValue is the starting value of the first byte
-*
-* @return
-*		- XST_SUCCESS if validation is successful
-*		- XST_FAILURE if validation is failure.
-*
-* @note		None.
-*
-******************************************************************************/
-static int CheckData(int Length, u8 *Buffer)
-{
-	u8 *RxPacket;
-	int Index = 0;
-	u8 Value;
-	RxPacket = (u8 *) RX_BUFFER_BASE;	
-
-	/* Invalidate the DestBuffer before receiving the data, in case the
-	 * Data Cache is enabled
-	 */
-	Xil_DCacheInvalidateRange((UINTPTR)RxPacket, Length);
-
-	for(Index = 0; Index < Length; Index++) {
-		Value = Buffer[Index];
-		if (RxPacket[Index] != Value) {
-			xil_printf("Data error %d: %x/%x\r\n",
-			    Index, RxPacket[Index], Value);
-			return XST_FAILURE;
-		}
-	}
-
-	return XST_SUCCESS;
-}
 
 /*****************************************************************************/
 /*
@@ -408,7 +382,7 @@ static void RxIntrHandler(void *Callback)
 * @note		None.
 *
 ******************************************************************************/
-static int SetupIntrSystem(INTC * IntcInstancePtr,
+static int DMASetupIntrSystem(INTC * IntcInstancePtr,
 			   XAxiDma * AxiDmaPtr, u16 TxIntrId, u16 RxIntrId)
 {
 	int Status;
@@ -525,7 +499,7 @@ static int SetupIntrSystem(INTC * IntcInstancePtr,
 * @note		None.
 *
 ******************************************************************************/
-static void DisableIntrSystem(INTC * IntcInstancePtr,
+static void DMADisableIntrSystem(INTC * IntcInstancePtr,
 					u16 TxIntrId, u16 RxIntrId)
 {
 #ifdef XPAR_INTC_0_DEVICE_ID

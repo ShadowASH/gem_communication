@@ -12,9 +12,8 @@
 
 #include "gem.h"
 #include "ber_decode.h"
-#include "dma_controller.h"
 
 #define DEBUG_SV_SUBSCRIBER TRUE
 
-u8 PacketsCounter = 0;
-extern u8 *dmaDataSet;
+void parseSVMessage(EthernetFrame * FramePtr);
+u8* getASDUDataSet();

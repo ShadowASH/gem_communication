@@ -1,115 +1,3 @@
-/******************************************************************************
-* Copyright (C) 2010 - 2020 Xilinx, Inc.  All rights reserved.
-* SPDX-License-Identifier: MIT
-******************************************************************************/
-
-/****************************************************************************/
-/**
-*
-* @file xemacps_example_intr_dma.c
-*
-* Implements examples that utilize the EmacPs's interrupt driven DMA
-* packet transfer mode to send and receive frames.
-*
-* These examples demonstrate:
-*
-* - How to perform simple send and receive.
-* - Interrupt
-* - Error handling
-* - Device reset
-*
-* Functional guide to example:
-*
-* - EmacPsDmaSingleFrameIntrExample demonstrates the simplest way to send and
-*   receive frames in in interrupt driven DMA mode.
-*
-* - EmacPsErrorHandler() demonstrates how to manage asynchronous errors.
-*
-* - EmacPsResetDevice() demonstrates how to reset the driver/HW without
-*   losing all configuration settings.
-*
-*
-* <pre>
-* MODIFICATION HISTORY:
-*
-* Ver   Who  Date     Changes
-* ----- ---- -------- -------------------------------------------------------
-* 1.00a wsy  01/10/10 First release
-* 1.00a asa  11/25/11 The cache disable routines are removed. So now both
-*		      I-cache and D-cache are enabled. The array RxBuffer is
-*		      removed to avoid an extra copy from RxBuffer to RxFrame.
-*		      Now the address of RxFrame is submitted to the Rx BD
-*		      instead of the address of RxBuffer.
-*		      In function EmacPsDmaSingleFrameIntrExample, BdRxPtr
-*		      is made as a pointer instead of array of pointers. This
-*		      is done since on the Rx path we now submit a single BD
-*		      instead of all 32 BDs. Because of this change, relevant
-*		      changes are made throughout the function
-*		      EmacPsDmaSingleFrameIntrExample.
-*		      Cache invalidation is now being done for the RxFrame
-*		      buffer.
-*		      The unnecessary cache flush (Xil_DCacheFlushRange) is
-*		      removed. This was being done towards the end of the
-*		      example which was unnecessary.
-* 1.00a asa 01/24/12  Support for Zynq board is added. The SLCR divisors are
-* 		      different for Zynq. Changes are made for the same.
-* 		      Presently the SLCR GEM clock divisors are hard-coded
-*		      assuming that IO PLL output frequency is 1000 MHz.
-* 		      The BDs are allocated at the address 0xFF00000 and the
-* 		      1 MB address range starting from this address is made
-* 		      uncached. This is because, for GEM the BDs need to be
-* 		      placed in uncached memory. The RX BDs are allocated at
-* 		      address 0xFF00000 and TX BDs are allocated at address
-* 		      0xFF10000.
-* 		      The MDIO divisor used of 224 is used for Zynq board.
-* 1.01a asa 02/27/12  The hardcoded SLCR divisors for Zynq are removed. The
-*		      divisors are obtained from xparameters.h.c. The sleep
-*		      values are reduced for Zynq. One sleep is added after
-*		      MDIO divisor is set. Some of the prints are removed.
-* 1.01a asa 03/14/12  The SLCR divisor support for ENET1 is added.
-* 1.01a asa 04/15/12  The funcation calls to Xil_DisableMMU and Xil_EnableMMU
-*		      are removed for setting the translation table
-*		      attributes for the BD memory region.
-* 1.05a asa 09/22/13 Cache handling is changed to fix an issue (CR#663885).
-*			  The cache invalidation of the Rx frame is now moved to
-*			  XEmacPsRecvHandler so that invalidation happens after the
-*			  received data is available in the memory. The variable
-*			  TxFrameLength is now made global.
-* 2.1	srt 07/11/14 Implemented 64-bit changes and modified as per
-*		      Zynq Ultrascale Mp GEM specification
-* 3.0  kpc  01/23/14 Removed PEEP board related code
-* 3.0  hk   03/18/15 Added support for jumbo frames.
-*                    Add cache flush after BD terminate entries.
-* 3.2  hk   10/15/15 Added clock control using CRL_APB_GEM_REF_CTRL register.
-*                    Enabled 1G speed for ZynqMP GEM.
-*                    Select GEM interrupt based on instance present.
-*                    Manage differences between emulation platform and silicon.
-* 3.2  mus  20/02/16.Added support for INTC interrupt controlller.
-*                    Added support to access zynq emacps interrupt from
-*                    microblaze.
-* 3.3 kpc   12/09/16 Fixed issue when -O2 is enabled
-* 3.4 ms    01/23/17 Modified xil_printf statement in main function to
-*                   ensure that "Successfully ran" and "Failed" strings
-*                   are available in all examples. This is a fix for
-*                   CR-965028.
-* 3.5 hk    08/14/17 Don't perform data cache operations when CCI is enabled
-*                    on ZynqMP.
-* 3.8 hk    10/01/18 Fix warning for redefinition of interrupt number.
-* 3.9 hk    02/12/19 Change MDC divisor for Versal emulation.
-*           03/06/19 Fix BD space assignment and its memory attributes.
-*           03/20/19 Fix alignment pragmas for IAR compiler.
-* 3.10 hk   05/17/19 Use correct platform register for Versal.
-*           08/12/19 Add clock setup support for Versal.
-*           14/08/19 Move definition of Platform to _util file for common use.
-*           08/24/19 Add support for clock configuration in EL1 Non Secure for
-*                    Versal.
-* 3.14 sk   12/23/20 Remove documentation for None param in main function to fix
-* 		     the doxygen warning.
-*
-* </pre>
-*
-*****************************************************************************/
-
 /***************************** Include Files ********************************/
 #include "gem.h"
 #include "xil_exception.h"
@@ -129,7 +17,7 @@
  * change all the needed parameters in one place.
  */
 #ifdef __MICROBLAZE__
-#define XPS_SYS_CTRL_BASEADDR	XPAR_PS7_SLCR_0_S_AXI_BASEADDR
+#define XPS_SYS_CTRL_BASEADDR	XPAR_PS7SLCR_0_S_AXI_BASEADDR
 #endif
 
 #ifdef XPAR_INTC_0_DEVICE_ID
@@ -274,15 +162,6 @@ u16 EmacPsIntrId;
 /*************************** Function Prototypes ****************************/
 
 /*
- * Application
- */
-LONG EmacPsDmaInit(INTC * IntcInstancePtr,
-			  XEmacPs * EmacPsInstancePtr,
-			  u16 EmacPsDeviceId)
-void EmacPsDmaStop(INTC * IntcInstancePtr, XEmacPs * EmacPsInstancePtr);
-LONG EmacPsDmaIntrRecv(XEmacPs *EmacPsInstancePtr);
-
-/*
  * Interrupt setup and Callbacks for examples
  */
 
@@ -316,33 +195,34 @@ void XEmacPs_SetMdioDivisor(XEmacPs *InstancePtr, XEmacPs_MdcDiv Divisor);
 * @note		None.
 *
 ****************************************************************************/
-#ifndef TESTAPP_GEN
-int main(void)
+LONG EmacPsDeviceStart()
 {
 	LONG Status;
-
-	xil_printf("Entering into main() \r\n");
+	xil_printf("Entering into EmcPsDevice \r\n");
 	/*
 	 * Initiate the EmacPs DMA interrupt application.
 	 */
-	EmacPsDmaInit(&IntcInstance, &EmacPsInstance, EMACPS_DEVICE_ID);
+	Status = EmacPsDmaInit(&IntcInstance, &EmacPsInstance, EMACPS_DEVICE_ID);
+	if (Status != XST_SUCCESS) {
+		EmacPsUtilErrorTrap("Error initiating GEM.\r\n");
+		return XST_FAILURE;
+	}
 	/*
 	 * Start receiving ethernet packages.
 	 */
 	Status = EmacPsDmaIntrRecv(&EmacPsInstance);
 	if (Status != XST_SUCCESS) {
-		EmacPsUtilErrorTrap("Emacps send to PL Failed\r\n");
+		EmacPsUtilErrorTrap("Emacps send to PL Failed.\r\n");
 		return XST_FAILURE;
 	}
 	/*
 	 * Stop the device.
 	 */
-	EmacPsDmaStop(&IntcInstance, &EmacPsInstance);
+	EmacPsDmaStop();
 
 	xil_printf("Application finished, stop the device.\r\n");
 	return XST_SUCCESS;
 }
-#endif
 
 
 /****************************************************************************/
@@ -635,25 +515,24 @@ LONG EmacPsDmaInit(INTC * IntcInstancePtr,
 /****************************************************************************/
 /**
 *
-* This function stops the Emac Ps driver.
+* This function stops the Emac Ps device.
 *
 *
-* @param	IntcInstancePtr is a pointer to the instance of the Intc driver.
-* @param	EmacPsInstancePtr is a pointer to the instance of the EmacPs
-*		driver.
+* @param	None.
 *
 * @return	None.
 *
 * @note		None.
 *
 *****************************************************************************/
-void EmacPsDmaStop(INTC * IntcInstancePtr, XEmacPs * EmacPsInstancePtr)
+void EmacPsDmaStop()
 {
+	INTC * IntcInstancePtr = &IntcInstance;
+	XEmacPs * EmacPsInstancePtr = &EmacPsInstance;
 	/*
 	 * Disable the interrupts for the EmacPs device
 	 */
 	EmacPsDisableIntrSystem(IntcInstancePtr, EmacPsIntrId);
-
 	/*
 	 * Stop the device
 	 */
@@ -735,41 +614,7 @@ LONG EmacPsDmaIntrRecv(XEmacPs * EmacPsInstancePtr)
 			Xil_DCacheFlushRange((UINTPTR)BdRxPtr, 64);
 		}
 	}
-	/*
-	 * Allocate, setup, and enqueue 1 TxBDs. The first BD will
-	 * describe the first 32 bytes of TxFrame and the rest of BDs
-	 * will describe the rest of the frame.
-	 *
-	 * The function below will allocate 1 adjacent BDs with Bd1Ptr
-	 * being set as the lead BD.
-	 */
-	Status = XEmacPs_BdRingAlloc(&(XEmacPs_GetTxRing(EmacPsInstancePtr)),
-				      1, &Bd1Ptr);
-	if (Status != XST_SUCCESS) {
-		EmacPsUtilErrorTrap("Error allocating TxBD");
-		return XST_FAILURE;
-	}
 
-	/*
-	 * Setup first TxBD
-	 */
-	XEmacPs_BdSetAddressTx(Bd1Ptr, (UINTPTR)&TxFrame);
-	XEmacPs_BdSetLength(Bd1Ptr, TxFrameLength);
-	XEmacPs_BdClearTxUsed(Bd1Ptr);
-	XEmacPs_BdSetLast(Bd1Ptr);
-
-	/*
-	 * Enqueue to HW
-	 */
-	Status = XEmacPs_BdRingToHw(&(XEmacPs_GetTxRing(EmacPsInstancePtr)),
-				     1, Bd1Ptr);
-	if (Status != XST_SUCCESS) {
-		EmacPsUtilErrorTrap("Error committing TxBD to HW");
-		return XST_FAILURE;
-	}
-	if (EmacPsInstancePtr->Config.IsCacheCoherent == 0) {
-		Xil_DCacheFlushRange((UINTPTR)Bd1Ptr, 64);
-	}
 	/*
 	 * Set the Queue pointers
 	 */
@@ -791,6 +636,11 @@ LONG EmacPsDmaIntrRecv(XEmacPs * EmacPsInstancePtr)
 	while (!FramesRx);
 
 	/*
+	* Process the SV message.
+	*/
+	parseSVMessage(&RxFrame);
+
+	/*
 	 * Now that the frame has been received, post process our RxBD.
 	 * Since we have submitted to hardware, then there should be only 1
 	 * ready for post processing.
@@ -805,21 +655,6 @@ LONG EmacPsDmaIntrRecv(XEmacPs * EmacPsInstancePtr)
 
 
 	/*
-	 * Process the SV message.
-	 */
-	parseSVMessage(&RxFrame);
-	/*
-	 * Send the data to dma controller.
-	 */
-	u8 *dataSet = getASDUDataSet();
-	int status = psSendDataToPL(dataSet, MAX_ASDU_LENGTH);
-	if (Status != XST_SUCCESS) {
-		EmacPsUtilErrorTrap("Error sending data to PL");
-        return XST_FAILURE;
-    }
-
-
-	/*
 	 * Return the RxBD back to the channel for later allocation. Free
 	 * the exact number we just post processed.
 	 */
@@ -830,15 +665,25 @@ LONG EmacPsDmaIntrRecv(XEmacPs * EmacPsInstancePtr)
 		return XST_FAILURE;
 	}
 
-	/*
-	 * Finished this example. If everything worked correctly, all TxBDs
-	 * and RxBDs should be free for allocation. Stop the device.
-	 */
-	XEmacPs_Stop(EmacPsInstancePtr);
-
 	return XST_SUCCESS;
 }
 
+/****************************************************************************/
+/**
+*
+* This function returns the current received frame.
+*
+*
+* @param	None
+*
+* @return	A pointer to the received frame.
+*
+* @note		None.
+*
+*****************************************************************************/
+EthernetFrame* getRxFrame(){
+	return &RxFrame;
+}
 
 
 /****************************************************************************/
